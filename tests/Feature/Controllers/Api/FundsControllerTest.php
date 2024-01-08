@@ -4,6 +4,7 @@ namespace Tests\Feature\Controllers\Api;
 
 use App\Models\Fund;
 use App\Models\FundManager;
+use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
 class FundsControllerTest extends TestCase
@@ -16,6 +17,7 @@ class FundsControllerTest extends TestCase
     public function setUp(): void
     {
         parent::setUp();
+        Event::fake();
 
         $this->fundManager = FundManager::factory()->create();
         $this->secondFundManager = FundManager::factory()->create();
@@ -197,6 +199,50 @@ class FundsControllerTest extends TestCase
         $this->assertDatabaseMissing('funds', [
             'name' => 'New fund Name',
             'year' => 2024,
+        ]);
+    }
+
+    public function test_it_returns_a_list_of_duplicated_funds(): void
+    {
+        /** @var Fund $fund */
+        $fund = Fund::factory()->create([
+            'name' => 'Same Name',
+            'fund_manager_id' => $this->fundManager
+        ]);
+        $duplicatedFund = Fund::factory()->create([
+            'name' => 'Same Name',
+            'fund_manager_id' => $this->fundManager
+        ]);
+
+        $response = $this->json('get', route('funds.list_duplicates'));
+
+        $response->assertSuccessful();
+        $response->assertJsonMissing([
+            'id' => $this->fund->id,
+            'name' => $this->fund->name,
+            'year' => $this->fund->year,
+        ]);
+        $response->assertJson([
+            'data' => [
+                [
+                    'id' => $fund->id,
+                    'name' => $fund->name,
+                    'year' => $fund->year,
+                    'manager' => [
+                        'id' => $this->fundManager->id,
+                        'name' => $this->fundManager->name,
+                    ]
+                ],
+                [
+                    'id' => $duplicatedFund->id,
+                    'name' => $duplicatedFund->name,
+                    'year' => $duplicatedFund->year,
+                    'manager' => [
+                        'id' => $this->fundManager->id,
+                        'name' => $this->fundManager->name,
+                    ]
+                ]
+            ]
         ]);
     }
 }

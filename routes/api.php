@@ -24,4 +24,6 @@ Route::group(['prefix' => 'funds'], static function () {
         ->name('funds.index');
     Route::patch('{fund}', [FundsController::class, 'update'])
         ->name('funds.update');
+    Route::get('duplicates', [FundsController::class, 'listDuplicates'])
+        ->name('funds.list_duplicates');
 });
